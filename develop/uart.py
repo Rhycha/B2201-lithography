@@ -135,8 +135,27 @@ class UART():
 
     def read_data(self):
         '''
+        serial data read from ser.inWaiting
         :return: bytearray
         '''
         data_left = ser.inWaiting()
         model.received_data = ser.read(data_left)
         return model.received_data
+
+    def update_ledCurrent(self):
+        tempCurrent = model.received_data[0] * 256 + model.received_data[1]
+        tempCurrent = tempCurrent * 3300 / 4095 / 110
+        model.ledCurrent = tempCurrent
+        str_ledCurrent = str(round(tempCurrent, 1))
+        return str_ledCurrent
+
+    def update_sensorvalue(self):
+        model.sensorValue = model.received_data[2]*256 + model.received_data[3]
+        return str(model.sensorValue)
+
+    def update_model(self):
+        data = read_data()
+        str_current = update_ledCurrent()
+        str_sensor = update_sensorvalue()
+
+        return data, str_current, str_sensor

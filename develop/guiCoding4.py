@@ -10,9 +10,8 @@ import sys
 import model
 from model import exposureTime, elapsedTime, exposureEnergy, outputPower, ledCurrent, temperature
 from uart import setDAC, clearDAC, read_data, doSthDAC, update_model
-
 from uart import UART
-
+uart = UART()
 class OpStatus(enum.Enum):
     READY = 0
     TIME_INPUT = 1
@@ -32,10 +31,14 @@ class AsyncTask:
 
             if round(model.elapsedTime, 1) < round(model.exposureTime, 1):
                 if model.elapsedTime == 0:
-                    setDAC()
+                    # setDAC()
+                    uart.setDAC()
+
                 else:
                     #update_model brings three values from model: received_data, str current, sensorvalue
-                    _,str_current, str_sensor = update_model()
+                    # _,str_current, str_sensor = update_model()
+                    _,str_current, str_sensor = uart.update_model()
+
                     labelCurrent2.configure(text = str_current)
                     labelSensor2.configure(text = str_sensor)
 
@@ -45,7 +48,8 @@ class AsyncTask:
                 tempString = str(round(model.elapsedTime * model.outputPower, 1)) + '/' + str(model.exposureEnergy)
                 labelEnergy2.configure(text = tempString)
 
-                doSthDAC()
+                # doSthDAC()
+                uart.doSthDAC()
 
             else:
                 labelTime2.configure(text = str(model.exposureTime))
@@ -53,10 +57,14 @@ class AsyncTask:
                 model.elapsedTime = 0
 
                 #for checking
-                model.received_data = read_data()
+                # model.received_data = read_data()
+                model.received_data = uart.read_data()
+
                 print(model.received_data.hex())
 
-                clearDAC()
+                # clearDAC()
+                uart.clearDAC()
+
                 labelCurrent2.configure(text = "0")
                 OpStatusChange("READY")
 
@@ -277,14 +285,16 @@ def KeyInputCheck(string):
             buttonStartStop.configure(state=tk.DISABLED)
             OpStatusChange("PAUSED")
             labelCurrent2.configure(text = "0")
-            clearDAC()
+            # clearDAC()
+            uart.clearDAC()
 
     elif opStatus == OpStatus.PAUSED:
         if string =="continue":
             frameTop.lift()
             buttonStartStop.configure(state=tk.NORMAL)
             OpStatusChange("EXPOSURE")
-            setDAC()
+            # setDAC()
+            uart.setDAC()
 
         if string =="stop":
             buttonStartStop.configure(state=tk.NORMAL)
@@ -380,7 +390,7 @@ labelPower2 = tk.Label(framePower, text =model.outputPower, bg = common.colorDar
 
 frameCurrent  = tk.Frame(frameTop, height = 100, width = 180, bg = common.colorDarkGray)
 labelCurrent1 = tk.Label(frameCurrent, text = "Current (A)", bg = common.colorDarkGray, fg = "white", font = common.fontSmallLabel)
-labelCurrent2 = tk.Label(frameCurrent, text =ledCurrent, bg = common.colorDarkGray, fg ="white", font = common.fontMiddleLabel)
+labelCurrent2 = tk.Label(frameCurrent, text =model.ledCurrent, bg = common.colorDarkGray, fg ="white", font = common.fontMiddleLabel)
 
 frameTemper = tk.Frame(frameTop, height = 100, width = 180, bg = common.colorDarkGray)
 labelTemper1 = tk.Label(frameTemper, text = "Temperature (℃)", bg = common.colorDarkGray, fg = "white", font = common.fontSmallLabel)
