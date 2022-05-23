@@ -9,9 +9,10 @@ import sys
 # model.변수와 변수를 동시에 쓸 수 있다.
 import model
 from model import exposureTime, elapsedTime, exposureEnergy, outputPower, ledCurrent, temperature
-from uart import setDAC, clearDAC, read_data, doSthDAC, update_model
-from uart import UART
-uart = UART()
+# from uart import setDAC, clearDAC, read_data, doSthDAC, update_model
+from uart import UART, UART_for_test
+uart = UART_for_test()
+
 class OpStatus(enum.Enum):
     READY = 0
     TIME_INPUT = 1
