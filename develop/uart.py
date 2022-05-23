@@ -1,6 +1,5 @@
 import serial
-
-from develop.guiCoding4 import outputPower
+from model import outputPower
 
 
 ser = serial.Serial(

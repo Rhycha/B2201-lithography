@@ -6,16 +6,9 @@ import enum
 import threading
 import sys
 
-exposureTime = 12.0
-elapsedTime = 0.0
-exposureEnergy = 240.0
-outputPower = 20.0
-ledCurrent = 0
-temperature = 42
-firstEntered = True
-sensorValue = 0
-
-from develop.uart import setDAC, clearDAC, read_data, doSthDAC
+import model
+from model import exposureTime, elapsedTime, exposureEnergy, outputPower, ledCurrent, temperature
+from uart import setDAC, clearDAC, read_data, doSthDAC
 
 class OpStatus(enum.Enum):
     READY = 0
@@ -30,13 +23,12 @@ class AsyncTask:
         pass
 
     def exposureTask(self):
-        global elapsedTime
-##        print ('Exposure Task is running')    ## print generate large delay during timer run
+        ##        print ('Exposure Task is running')    ## print generate large delay during timer run
         if(opStatus == OpStatus.EXPOSURE):
             threading.Timer(0.1, self.exposureTask).start()
 
-            if round(elapsedTime, 1) < round(exposureTime, 1):
-                if elapsedTime == 0:
+            if round(model.elapsedTime, 1) < round(exposureTime, 1):
+                if model.elapsedTime == 0:
                     setDAC()
                 else:
                     received_data = read_data()
@@ -50,10 +42,10 @@ class AsyncTask:
                     tempString = str(sensorValue)
                     labelSensor2.configure(text = tempString)
 
-                elapsedTime += 0.1
-                tempString = str(round(elapsedTime, 1)) + '/' + str(exposureTime)
+                model.elapsedTime += 0.1
+                tempString = str(round(model.elapsedTime, 1)) + '/' + str(exposureTime)
                 labelTime2.configure(text = tempString)
-                tempString = str(round(elapsedTime*outputPower, 1)) + '/' + str(exposureEnergy)
+                tempString = str(round(model.elapsedTime * outputPower, 1)) + '/' + str(exposureEnergy)
                 labelEnergy2.configure(text = tempString)
 
                 doSthDAC()
@@ -61,7 +53,7 @@ class AsyncTask:
             else:
                 labelTime2.configure(text = str(exposureTime))
                 labelEnergy2.configure(text = str(exposureEnergy))
-                elapsedTime = 0
+                model.elapsedTime = 0
 
                 received_data = read_data()
                 print(received_data.hex())
@@ -91,8 +83,7 @@ def tabChanged(event):
 
 def OpStatusChange(string):
     global opStatus
-    global firstEntered
-    
+
     if string == "READY":
         frameTime.configure(highlightthickness = "0")
         frameEnergy.configure(highlightthickness = "0")
@@ -104,7 +95,7 @@ def OpStatusChange(string):
         if opStatus == OpStatus.EXPOSURE or opStatus == OpStatus.PAUSED:
             buttonStartStop.configure(bg = common.colorGreen, activebackground = common.colorGreen, text = "START")
 
-        firstEntered = True
+        model.firstEntered = True
         opStatus = OpStatus.READY
         frameTop.lift()
         print("OpStatus: READY")
@@ -178,20 +169,14 @@ def OpStatusChange(string):
 
 
 def KeyInputCheck(string):
-    global firstEntered
-    global exposureTime
-    global exposureEnergy
-    global outputPower
-    global elapsedTime
-
     if opStatus == OpStatus.TIME_INPUT or opStatus == OpStatus.ENERGY_INPUT:
     
         if string == "cancel":
             OpStatusChange("READY")
         elif string == "confirm":
 
-            exposureTime = round(float(labelTime2.cget('text')), 1)
-            exposureEnergy = round(exposureTime * outputPower, 1)
+            model.exposureTime = round(float(labelTime2.cget('text')), 1)
+            model.exposureEnergy = round(model.exposureTime * model.outputPower, 1)
             OpStatusChange("READY")
         else:
             if opStatus == OpStatus.TIME_INPUT:
@@ -203,10 +188,10 @@ def KeyInputCheck(string):
                 elif string == "clear":
                     tempNumber = 0 
                     labelTime2.configure(text = str(tempNumber))
-                    labelEnergy2.configure(text = str(tempNumber * outputPower))
+                    labelEnergy2.configure(text = str(tempNumber * model.outputPower))
 
                 else:
-                    if firstEntered == False:
+                    if model.firstEntered == False:
                         if float(labelTime2.cget('text')) != 0:
                             tempNumber = round(100*float(labelTime2.cget('text')))
                             tempNumber = tempNumber % 10
@@ -225,12 +210,12 @@ def KeyInputCheck(string):
                             tempNumber = int(string)
                             labelTime2.configure(text = string)
                         
-                    elif firstEntered == True:
+                    elif model.firstEntered == True:
                         tempNumber = int(string)
                         labelTime2.configure(text = string)
-                        firstEntered = False
+                        model.firstEntered = False
 
-                    tempNumber = float(round(tempNumber * outputPower, 1))
+                    tempNumber = float(round(tempNumber * model.outputPower, 1))
                     labelEnergy2.configure(text = str(tempNumber))
                         
 
@@ -243,10 +228,10 @@ def KeyInputCheck(string):
                 elif string == "clear":
                     tempNumber = 0
                     labelTime2.configure(text = str(tempNumber))
-                    labelEnergy2.configure(text = str(tempNumber * outputPower))
+                    labelEnergy2.configure(text = str(tempNumber * model.outputPower))
 
                 else:
-                    if firstEntered == False:
+                    if model.firstEntered == False:
                         if float(labelEnergy2.cget('text')) != 0:
                             tempNumber = round(100*float(labelEnergy2.cget('text')))
                             tempNumber = tempNumber % 10
@@ -256,8 +241,8 @@ def KeyInputCheck(string):
                                 tempString = str(labelEnergy2.cget('text'))
                             
                             tempNumber = round(float(tempString), 1)
-                            if tempNumber > 600*outputPower:
-                                tempNumber = 600*outputPower
+                            if tempNumber > 600* model.outputPower:
+                                tempNumber = 600 * model.outputPower
                                 labelEnergy2.configure(text =  str(tempNumber))
                             else:
                                 labelEnergy2.configure(text =  tempString)
@@ -265,12 +250,12 @@ def KeyInputCheck(string):
                             tempNumber = int(string)
                             labelEnergy2.configure(text = string)
 
-                    elif firstEntered == True:
+                    elif model.firstEntered == True:
                         tempNumber = int(string)
                         labelEnergy2.configure(text = string)
-                        firstEntered = False
+                        model.firstEntered = False
                     
-                    tempNumber = float(round(tempNumber / outputPower, 1))
+                    tempNumber = float(round(tempNumber / model.outputPower, 1))
                     labelTime2.configure(text = str(tempNumber))
                     
 
@@ -298,17 +283,17 @@ def KeyInputCheck(string):
 
         if string =="stop":
             buttonStartStop.configure(state=tk.NORMAL)
-            elapsedTime = 0.0
+            model.elapsedTime = 0.0
             OpStatusChange("READY")
 
     elif opStatus == OpStatus.SETTING:
         if string == "cancel":
             OpStatusChange("READY")
         elif string == "confirm":
-            outputPower = round(float(labelPowerInSetting2.cget('text')), 1)
-            exposureEnergy = round(exposureTime * outputPower, 1)
+            model.outputPower = round(float(labelPowerInSetting2.cget('text')), 1)
+            model.exposureEnergy = round(model.exposureTime * model.outputPower, 1)
             OpStatusChange("READY")
-            labelPower2.configure(text = str(outputPower))
+            labelPower2.configure(text = str(model.outputPower))
 
         else:
             if string == "point":
@@ -319,10 +304,10 @@ def KeyInputCheck(string):
             elif string == "clear":
                 tempNumber = 0 
                 labelPowerInSetting2.configure(text = str(tempNumber))
-                labelEnergy2.configure(text = str(tempNumber * outputPower))
+                labelEnergy2.configure(text = str(tempNumber * model.outputPower))
 
             else:
-                if firstEntered == False:
+                if model.firstEntered == False:
                     if float(labelPowerInSetting2.cget('text')) != 0:
                         tempNumber = round(100*float(labelPowerInSetting2.cget('text')))
                         tempNumber = tempNumber % 10
@@ -338,13 +323,13 @@ def KeyInputCheck(string):
                         tempNumber = int(string)
                         labelPowerInSetting2.configure(text = string)
                     
-                elif firstEntered == True:
+                elif model.firstEntered == True:
                     tempNumber = int(string)
                     labelPowerInSetting2.configure(text = string)
-                    firstEntered = False
+                    model.firstEntered = False
 
                     
-                tempNumber = float(round(tempNumber * exposureTime, 1))
+                tempNumber = float(round(tempNumber * model.exposureTime, 1))
                 labelEnergy2.configure(text = str(tempNumber))
             
 
@@ -370,7 +355,7 @@ subframeButton2.place(in_ = frameButton, x = 570, y = 25)
 
 frameTime  = tk.Frame(frameTop, height = 130, width = 355, bg = common.colorBrightGray, highlightbackground = "yellow")
 labelTime1 = tk.Label(frameTime, text = "Exposure Time (sec)", bg = common.colorBrightGray, fg = "white", font = common.fontSmallLabel)
-labelTime2 = tk.Label(frameTime, text = exposureTime, bg = common.colorBrightGray, fg = "white", font = common.fontMiddleLabel)
+labelTime2 = tk.Label(frameTime, text =exposureTime, bg = common.colorBrightGray, fg ="white", font = common.fontMiddleLabel)
 
 frameTime.bind("<Button-1>",  lambda event: OpStatusChange("TIME_INPUT"))
 labelTime1.bind("<Button-1>",  lambda event: OpStatusChange("TIME_INPUT"))
@@ -378,7 +363,7 @@ labelTime2.bind("<Button-1>",  lambda event: OpStatusChange("TIME_INPUT"))
 
 frameEnergy  = tk.Frame(frameTop, height = 130, width = 355, bg = common.colorBrightGray, highlightbackground = "yellow")
 labelEnergy1 = tk.Label(frameTop, text = "Exposure Energy (mJ/cm²)", bg = common.colorBrightGray, fg = "white", font = common.fontSmallLabel)
-labelEnergy2 = tk.Label(frameTop, text = exposureEnergy, bg = common.colorBrightGray, fg = "white", font = common.fontMiddleLabel)
+labelEnergy2 = tk.Label(frameTop, text =exposureEnergy, bg = common.colorBrightGray, fg ="white", font = common.fontMiddleLabel)
 
 frameEnergy.bind("<Button-1>",  lambda event: OpStatusChange("ENERGY_INPUT"))
 labelEnergy1.bind("<Button-1>",  lambda event: OpStatusChange("ENERGY_INPUT"))
@@ -386,15 +371,15 @@ labelEnergy2.bind("<Button-1>",  lambda event: OpStatusChange("ENERGY_INPUT"))
 
 framePower  = tk.Frame(frameTop, height = 100, width = 220, bg = common.colorDarkGray)
 labelPower1 = tk.Label(framePower, text = "Power (mW/cm²)", bg = common.colorDarkGray, fg = "white", font = common.fontSmallLabel)
-labelPower2 = tk.Label(framePower, text = outputPower, bg = common.colorDarkGray, fg = "white", font = common.fontMiddleLabel)
+labelPower2 = tk.Label(framePower, text =outputPower, bg = common.colorDarkGray, fg ="white", font = common.fontMiddleLabel)
 
 frameCurrent  = tk.Frame(frameTop, height = 100, width = 180, bg = common.colorDarkGray)
 labelCurrent1 = tk.Label(frameCurrent, text = "Current (A)", bg = common.colorDarkGray, fg = "white", font = common.fontSmallLabel)
-labelCurrent2 = tk.Label(frameCurrent, text = ledCurrent, bg = common.colorDarkGray, fg = "white", font = common.fontMiddleLabel)
+labelCurrent2 = tk.Label(frameCurrent, text =ledCurrent, bg = common.colorDarkGray, fg ="white", font = common.fontMiddleLabel)
 
 frameTemper = tk.Frame(frameTop, height = 100, width = 180, bg = common.colorDarkGray)
 labelTemper1 = tk.Label(frameTemper, text = "Temperature (℃)", bg = common.colorDarkGray, fg = "white", font = common.fontSmallLabel)
-labelTemper2 = tk.Label(frameTemper, text = temperature, bg = common.colorDarkGray, fg = "white", font = common.fontMiddleLabel)
+labelTemper2 = tk.Label(frameTemper, text =temperature, bg = common.colorDarkGray, fg ="white", font = common.fontMiddleLabel)
 
 
 frameTime.place(x = 30, y = 30, height = 130, width = 355)
@@ -473,9 +458,9 @@ buttonConfirm.grid(row=1, column=1, sticky="nwes", padx = 10, pady = 10)
 framePaused = tk.Frame(root, height = 310, width = 634, bg = common.colorIvory, highlightthickness = 2, highlightbackground = "gray")
 labelPausedTitle = tk.Label(framePaused, text = "Exposure Paused", bg = common.colorIvory, fg = "black", font = common.fontMiddleLabelBold2)
 labelPausedTimeFixed = tk.Label(framePaused, text = "Exposed Time (sec)", bg = common.colorIvory, fg = "black", font = common.fontSmallLabel2, anchor = "w")
-labelPausedTime = tk.Label(framePaused, text = str(elapsedTime), bg = common.colorIvory, fg = "black", font = common.fontSmallLabelBold2, anchor = "w")
+labelPausedTime = tk.Label(framePaused, text = str(elapsedTime), bg = common.colorIvory, fg ="black", font = common.fontSmallLabelBold2, anchor ="w")
 labelPausedEnergyFixed = tk.Label(framePaused, text = "Exposed Energy (mJ/cm²)", bg = common.colorIvory, fg = "black", font = common.fontSmallLabel2, anchor = "w")
-labelPausedEnergy = tk.Label(framePaused, text = str(elapsedTime * outputPower), bg = common.colorIvory, fg = "black", font = common.fontSmallLabelBold2, anchor = "w")
+labelPausedEnergy = tk.Label(framePaused, text = str(elapsedTime * outputPower), bg = common.colorIvory, fg ="black", font = common.fontSmallLabelBold2, anchor ="w")
 buttonContinue = tk.Button(framePaused, text = "Continue", bg = common.colorBrightGreen, fg = "white", font = common.fontMiddleLabel2, activeforeground = "white", activebackground = common.colorBrightGreen, command = lambda:KeyInputCheck("continue"))
 buttonStop = tk.Button(framePaused, text = "Stop", bg = common.colorBrightRed, fg = "white", font = common.fontMiddleLabel2, activeforeground = "white", activebackground = common.colorBrightRed, command = lambda:KeyInputCheck("stop"))
 
@@ -510,7 +495,7 @@ tabSetting.add(frameSetting1, text="Output Power")
 
 framePowerInSetting  = tk.Frame(frameSetting1, height = 100, width = 355, bg = common.colorDarkGray, highlightbackground = "yellow", highlightthickness = 2)
 labelPowerInSetting1 = tk.Label(framePowerInSetting, text = "Power (mW/cm²)", bg = common.colorDarkGray, fg = "white", font = common.fontSmallLabel)
-labelPowerInSetting2 = tk.Label(framePowerInSetting, text = outputPower, bg = common.colorDarkGray, fg = "yellow", font = common.fontMiddleLabel)
+labelPowerInSetting2 = tk.Label(framePowerInSetting, text =outputPower, bg = common.colorDarkGray, fg ="yellow", font = common.fontMiddleLabel)
 framePowerInSetting.place(x = 230, y = 40)
 labelPowerInSetting1.place(in_= framePowerInSetting, x = 0, y = 5, width = 335, height = 25)
 labelPowerInSetting2.place(in_= framePowerInSetting, x = 0, y = 40, width = 335, height = 55)
