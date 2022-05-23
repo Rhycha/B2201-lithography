@@ -1,3 +1,5 @@
+from abc import ABCMeta, abstractmethod
+
 import serial
 import model
 
@@ -84,17 +86,54 @@ def update_model():
 #     '''
 
 
-class UART():
+class abstract_UART(metaclass=ABCMeta):
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def setDAC(self):
+        pass
+
+    @abstractmethod
+    def clearDAC(self):
+        pass
+
+    @abstractmethod
+    def doSthDAC(self):
+        pass
+
+    @abstractmethod
+    def read_data(self):
+        '''
+        serial data read from ser.inWaiting
+        :return: bytearray
+        '''
+        pass
+
+    @abstractmethod
+    def update_ledCurrent(self):
+        pass
+
+    @abstractmethod
+    def update_sensorvalue(self):
+        pass
+
+    @abstractmethod
+    def update_model(self):
+        pass
+
+
+class UART(abstract_UART):
 
     def __init__(self):
         import serial
         ser = serial.Serial(
-        port='/dev/ttyAMA1',
-        baudrate=115200,
-        parity=serial.PARITY_NONE,
-        stopbits=serial.STOPBITS_ONE,
-        bytesize=serial.EIGHTBITS,
-        timeout=1)
+            port='/dev/ttyAMA1',
+            baudrate=115200,
+            parity=serial.PARITY_NONE,
+            stopbits=serial.STOPBITS_ONE,
+            bytesize=serial.EIGHTBITS,
+            timeout=1)
 
     def setDAC(self):
         if model.outputPower > 170:
@@ -159,3 +198,5 @@ class UART():
         str_sensor = update_sensorvalue()
 
         return data, str_current, str_sensor
+
+class UART_for_test(abstract_UART):
