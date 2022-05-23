@@ -6,9 +6,12 @@ import enum
 import threading
 import sys
 
+# model.변수와 변수를 동시에 쓸 수 있다.
 import model
 from model import exposureTime, elapsedTime, exposureEnergy, outputPower, ledCurrent, temperature
 from uart import setDAC, clearDAC, read_data, doSthDAC
+
+from uart import UART
 
 class OpStatus(enum.Enum):
     READY = 0
@@ -27,14 +30,11 @@ class AsyncTask:
         if(opStatus == OpStatus.EXPOSURE):
             threading.Timer(0.1, self.exposureTask).start()
 
-            if round(model.elapsedTime, 1) < round(exposureTime, 1):
+            if round(model.elapsedTime, 1) < round(model.exposureTime, 1):
                 if model.elapsedTime == 0:
                     setDAC()
                 else:
-                    received_data = read_data()
-                    ledCurrent = received_data[0]*256 + received_data[1]
-                    ledCurrent = ledCurrent*3300/4095/110
-                    tempString = str(round(ledCurrent, 1))
+                    received_data, tempString = self.get_ledCurrent()
                     #tempString = str(ledCurrent)
                     labelCurrent2.configure(text = tempString)
 
@@ -43,16 +43,16 @@ class AsyncTask:
                     labelSensor2.configure(text = tempString)
 
                 model.elapsedTime += 0.1
-                tempString = str(round(model.elapsedTime, 1)) + '/' + str(exposureTime)
+                tempString = str(round(model.elapsedTime, 1)) + '/' + str(model.exposureTime)
                 labelTime2.configure(text = tempString)
-                tempString = str(round(model.elapsedTime * outputPower, 1)) + '/' + str(exposureEnergy)
+                tempString = str(round(model.elapsedTime * model.outputPower, 1)) + '/' + str(model.exposureEnergy)
                 labelEnergy2.configure(text = tempString)
 
                 doSthDAC()
 
             else:
-                labelTime2.configure(text = str(exposureTime))
-                labelEnergy2.configure(text = str(exposureEnergy))
+                labelTime2.configure(text = str(model.exposureTime))
+                labelEnergy2.configure(text = str(model.exposureEnergy))
                 model.elapsedTime = 0
 
                 received_data = read_data()
@@ -61,6 +61,13 @@ class AsyncTask:
                 clearDAC()
                 labelCurrent2.configure(text = "0")
                 OpStatusChange("READY")
+
+    def get_ledCurrent(self):
+        received_data = read_data()
+        ledCurrent = received_data[0] * 256 + received_data[1]
+        ledCurrent = ledCurrent * 3300 / 4095 / 110
+        tempString = str(round(ledCurrent, 1))
+        return received_data, tempString
 
 
 at = AsyncTask()
@@ -87,8 +94,8 @@ def OpStatusChange(string):
     if string == "READY":
         frameTime.configure(highlightthickness = "0")
         frameEnergy.configure(highlightthickness = "0")
-        labelTime2.configure(text = str(exposureTime))
-        labelEnergy2.configure(text = str(exposureEnergy))
+        labelTime2.configure(text = str(model.exposureTime))
+        labelEnergy2.configure(text = str(model.exposureEnergy))
         labelTime2.configure(fg = "white")
         labelEnergy2.configure(fg = "white")
 
@@ -148,8 +155,8 @@ def OpStatusChange(string):
         if opStatus == OpStatus.EXPOSURE:
             opStatus = OpStatus.PAUSED
 
-            labelPausedTime.configure(text = str(round(elapsedTime, 1)))
-            labelPausedEnergy.configure(text = str(round(elapsedTime * outputPower, 1)))
+            labelPausedTime.configure(text = str(round(model.elapsedTime, 1)))
+            labelPausedEnergy.configure(text = str(round(model.elapsedTime * model.outputPower, 1)))
             framePaused.lift()
             print("OpStatus: PAUSED")
             
@@ -355,7 +362,7 @@ subframeButton2.place(in_ = frameButton, x = 570, y = 25)
 
 frameTime  = tk.Frame(frameTop, height = 130, width = 355, bg = common.colorBrightGray, highlightbackground = "yellow")
 labelTime1 = tk.Label(frameTime, text = "Exposure Time (sec)", bg = common.colorBrightGray, fg = "white", font = common.fontSmallLabel)
-labelTime2 = tk.Label(frameTime, text =exposureTime, bg = common.colorBrightGray, fg ="white", font = common.fontMiddleLabel)
+labelTime2 = tk.Label(frameTime, text =model.exposureTime, bg = common.colorBrightGray, fg ="white", font = common.fontMiddleLabel)
 
 frameTime.bind("<Button-1>",  lambda event: OpStatusChange("TIME_INPUT"))
 labelTime1.bind("<Button-1>",  lambda event: OpStatusChange("TIME_INPUT"))
@@ -363,7 +370,7 @@ labelTime2.bind("<Button-1>",  lambda event: OpStatusChange("TIME_INPUT"))
 
 frameEnergy  = tk.Frame(frameTop, height = 130, width = 355, bg = common.colorBrightGray, highlightbackground = "yellow")
 labelEnergy1 = tk.Label(frameTop, text = "Exposure Energy (mJ/cm²)", bg = common.colorBrightGray, fg = "white", font = common.fontSmallLabel)
-labelEnergy2 = tk.Label(frameTop, text =exposureEnergy, bg = common.colorBrightGray, fg ="white", font = common.fontMiddleLabel)
+labelEnergy2 = tk.Label(frameTop, text =model.exposureEnergy, bg = common.colorBrightGray, fg ="white", font = common.fontMiddleLabel)
 
 frameEnergy.bind("<Button-1>",  lambda event: OpStatusChange("ENERGY_INPUT"))
 labelEnergy1.bind("<Button-1>",  lambda event: OpStatusChange("ENERGY_INPUT"))
@@ -371,7 +378,7 @@ labelEnergy2.bind("<Button-1>",  lambda event: OpStatusChange("ENERGY_INPUT"))
 
 framePower  = tk.Frame(frameTop, height = 100, width = 220, bg = common.colorDarkGray)
 labelPower1 = tk.Label(framePower, text = "Power (mW/cm²)", bg = common.colorDarkGray, fg = "white", font = common.fontSmallLabel)
-labelPower2 = tk.Label(framePower, text =outputPower, bg = common.colorDarkGray, fg ="white", font = common.fontMiddleLabel)
+labelPower2 = tk.Label(framePower, text =model.outputPower, bg = common.colorDarkGray, fg ="white", font = common.fontMiddleLabel)
 
 frameCurrent  = tk.Frame(frameTop, height = 100, width = 180, bg = common.colorDarkGray)
 labelCurrent1 = tk.Label(frameCurrent, text = "Current (A)", bg = common.colorDarkGray, fg = "white", font = common.fontSmallLabel)
@@ -379,7 +386,7 @@ labelCurrent2 = tk.Label(frameCurrent, text =ledCurrent, bg = common.colorDarkGr
 
 frameTemper = tk.Frame(frameTop, height = 100, width = 180, bg = common.colorDarkGray)
 labelTemper1 = tk.Label(frameTemper, text = "Temperature (℃)", bg = common.colorDarkGray, fg = "white", font = common.fontSmallLabel)
-labelTemper2 = tk.Label(frameTemper, text =temperature, bg = common.colorDarkGray, fg ="white", font = common.fontMiddleLabel)
+labelTemper2 = tk.Label(frameTemper, text =model.temperature, bg = common.colorDarkGray, fg ="white", font = common.fontMiddleLabel)
 
 
 frameTime.place(x = 30, y = 30, height = 130, width = 355)
@@ -458,9 +465,9 @@ buttonConfirm.grid(row=1, column=1, sticky="nwes", padx = 10, pady = 10)
 framePaused = tk.Frame(root, height = 310, width = 634, bg = common.colorIvory, highlightthickness = 2, highlightbackground = "gray")
 labelPausedTitle = tk.Label(framePaused, text = "Exposure Paused", bg = common.colorIvory, fg = "black", font = common.fontMiddleLabelBold2)
 labelPausedTimeFixed = tk.Label(framePaused, text = "Exposed Time (sec)", bg = common.colorIvory, fg = "black", font = common.fontSmallLabel2, anchor = "w")
-labelPausedTime = tk.Label(framePaused, text = str(elapsedTime), bg = common.colorIvory, fg ="black", font = common.fontSmallLabelBold2, anchor ="w")
+labelPausedTime = tk.Label(framePaused, text = str(model.elapsedTime), bg = common.colorIvory, fg ="black", font = common.fontSmallLabelBold2, anchor ="w")
 labelPausedEnergyFixed = tk.Label(framePaused, text = "Exposed Energy (mJ/cm²)", bg = common.colorIvory, fg = "black", font = common.fontSmallLabel2, anchor = "w")
-labelPausedEnergy = tk.Label(framePaused, text = str(elapsedTime * outputPower), bg = common.colorIvory, fg ="black", font = common.fontSmallLabelBold2, anchor ="w")
+labelPausedEnergy = tk.Label(framePaused, text = str(model.elapsedTime * model.outputPower), bg = common.colorIvory, fg ="black", font = common.fontSmallLabelBold2, anchor ="w")
 buttonContinue = tk.Button(framePaused, text = "Continue", bg = common.colorBrightGreen, fg = "white", font = common.fontMiddleLabel2, activeforeground = "white", activebackground = common.colorBrightGreen, command = lambda:KeyInputCheck("continue"))
 buttonStop = tk.Button(framePaused, text = "Stop", bg = common.colorBrightRed, fg = "white", font = common.fontMiddleLabel2, activeforeground = "white", activebackground = common.colorBrightRed, command = lambda:KeyInputCheck("stop"))
 
@@ -495,7 +502,7 @@ tabSetting.add(frameSetting1, text="Output Power")
 
 framePowerInSetting  = tk.Frame(frameSetting1, height = 100, width = 355, bg = common.colorDarkGray, highlightbackground = "yellow", highlightthickness = 2)
 labelPowerInSetting1 = tk.Label(framePowerInSetting, text = "Power (mW/cm²)", bg = common.colorDarkGray, fg = "white", font = common.fontSmallLabel)
-labelPowerInSetting2 = tk.Label(framePowerInSetting, text =outputPower, bg = common.colorDarkGray, fg ="yellow", font = common.fontMiddleLabel)
+labelPowerInSetting2 = tk.Label(framePowerInSetting, text =model.outputPower, bg = common.colorDarkGray, fg ="yellow", font = common.fontMiddleLabel)
 framePowerInSetting.place(x = 230, y = 40)
 labelPowerInSetting1.place(in_= framePowerInSetting, x = 0, y = 5, width = 335, height = 25)
 labelPowerInSetting2.place(in_= framePowerInSetting, x = 0, y = 40, width = 335, height = 55)

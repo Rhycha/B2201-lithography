@@ -58,7 +58,8 @@ def read_data():
     return received_data
 
 
-class URAT():
+
+class UART():
 
     def __init__(self):
         import serial
