@@ -1,5 +1,5 @@
 import serial
-from model import outputPower
+import model
 
 
 ser = serial.Serial(
@@ -11,10 +11,10 @@ ser = serial.Serial(
     timeout=1)
 
 def setDAC():
-    if outputPower > 170:
+    if model.outputPower > 170:
         tempValue = int(170*4095/500)
     else:
-        tempValue = int(outputPower*4095/500)
+        tempValue = int(model.outputPower*4095/500)
     ser.write(bytes(bytearray([0xA0])))
     ser.write(bytes(bytearray([0x00])))
     ser.write(bytes(bytearray([tempValue >> 8])))
@@ -51,12 +51,37 @@ def doSthDAC():
 
 def read_data():
     '''
+    serial data read from ser.inWaiting
     :return: bytearray
     '''
     data_left = ser.inWaiting()
-    received_data = ser.read(data_left)
-    return received_data
+    model.received_data = ser.read(data_left)
+    return model.received_data
 
+def update_ledCurrent():
+    tempCurrent = model.received_data[0] * 256 + model.received_data[1]
+    tempCurrent = tempCurrent * 3300 / 4095 / 110
+    model.ledCurrent = tempCurrent
+    str_ledCurrent = str(round(tempCurrent, 1))
+    return str_ledCurrent
+
+def update_sensorvalue():
+    model.sensorValue = model.received_data[2]*256 + model.received_data[3]
+    return str(model.sensorValue)
+
+def update_model():
+    data = read_data()
+    str_current = update_ledCurrent()
+    str_sensor = update_sensorvalue()
+
+    return data, str_current, str_sensor
+
+
+# def calculate_current_from_data(data):
+#     '''
+#     :param data: recevied_data from read_data
+#     :return:
+#     '''
 
 
 class UART():
@@ -72,10 +97,10 @@ class UART():
         timeout=1)
 
     def setDAC(self):
-        if outputPower > 170:
+        if model.outputPower > 170:
             tempValue = int(170 * 4095 / 500)
         else:
-            tempValue = int(outputPower * 4095 / 500)
+            tempValue = int(model.outputPower * 4095 / 500)
         ser.write(bytes(bytearray([0xA0])))
         ser.write(bytes(bytearray([0x00])))
         ser.write(bytes(bytearray([tempValue >> 8])))
@@ -113,5 +138,5 @@ class UART():
         :return: bytearray
         '''
         data_left = ser.inWaiting()
-        received_data = ser.read(data_left)
-        return received_data
+        model.received_data = ser.read(data_left)
+        return model.received_data

@@ -9,7 +9,7 @@ import sys
 # model.변수와 변수를 동시에 쓸 수 있다.
 import model
 from model import exposureTime, elapsedTime, exposureEnergy, outputPower, ledCurrent, temperature
-from uart import setDAC, clearDAC, read_data, doSthDAC
+from uart import setDAC, clearDAC, read_data, doSthDAC, update_model
 
 from uart import UART
 
@@ -34,13 +34,10 @@ class AsyncTask:
                 if model.elapsedTime == 0:
                     setDAC()
                 else:
-                    received_data, tempString = self.get_ledCurrent()
-                    #tempString = str(ledCurrent)
-                    labelCurrent2.configure(text = tempString)
-
-                    sensorValue = received_data[2]*256 + received_data[3]
-                    tempString = str(sensorValue)
-                    labelSensor2.configure(text = tempString)
+                    #update_model brings three values from model: received_data, str current, sensorvalue
+                    _,str_current, str_sensor = update_model()
+                    labelCurrent2.configure(text = str_current)
+                    labelSensor2.configure(text = str_sensor)
 
                 model.elapsedTime += 0.1
                 tempString = str(round(model.elapsedTime, 1)) + '/' + str(model.exposureTime)
@@ -55,19 +52,20 @@ class AsyncTask:
                 labelEnergy2.configure(text = str(model.exposureEnergy))
                 model.elapsedTime = 0
 
-                received_data = read_data()
-                print(received_data.hex())
+                #for checking
+                model.received_data = read_data()
+                print(model.received_data.hex())
 
                 clearDAC()
                 labelCurrent2.configure(text = "0")
                 OpStatusChange("READY")
 
-    def get_ledCurrent(self):
-        received_data = read_data()
-        ledCurrent = received_data[0] * 256 + received_data[1]
-        ledCurrent = ledCurrent * 3300 / 4095 / 110
-        tempString = str(round(ledCurrent, 1))
-        return received_data, tempString
+    # def get_ledCurrent(self):
+    #     received_data = read_data()
+    #     ledCurrent = received_data[0] * 256 + received_data[1]
+    #     ledCurrent = ledCurrent * 3300 / 4095 / 110
+    #     tempString = str(round(ledCurrent, 1))
+    #     return received_data, tempString
 
 
 at = AsyncTask()
