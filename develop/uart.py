@@ -132,8 +132,10 @@ class UART(abstract_UART):
             tempValue = int(model.outputPower * 4095 / 500)
         self.ser.write(bytes(bytearray([0xA0])))
         self.ser.write(bytes(bytearray([0x00])))
-        self.ser.write(bytes(bytearray([tempValue >> 8])))
-        self.ser.write(bytes(bytearray([tempValue & 0x00ff])))
+        # DAC communication unit is one byte.
+        # And Our Protocol is 12 bit DAC communication.
+        self.ser.write(bytes(bytearray([tempValue >> 8]))) #
+        self.ser.write(bytes(bytearray([tempValue & 0x00ff]))) #suppress tempValue and shoot one byte
 
         self.ser.write(bytes(bytearray([0xA0])))
         self.ser.write(bytes(bytearray([0x01])))
@@ -216,7 +218,7 @@ class UART_for_test(abstract_UART):
     def update_sensorvalue(self):
         import random
         model.sensorValue = random.uniform(1,1000)
-        str_sensor = str(round(model.sensorValue),1)
+        str_sensor = str(round(model.sensorValue,1))
         return str_sensor
 
     def update_model(self):

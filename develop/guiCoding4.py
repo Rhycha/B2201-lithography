@@ -11,6 +11,8 @@ import model
 from model import exposureTime, elapsedTime, exposureEnergy, outputPower, ledCurrent, temperature
 # from uart import setDAC, clearDAC, read_data, doSthDAC, update_model
 from uart import UART, UART_for_test
+
+# Set mode Choose among UART and UART_for_test
 uart = UART_for_test()
 
 class OpStatus(enum.Enum):
@@ -420,7 +422,7 @@ labelTemper2.place(in_= frameTemper, x = 0, y = 40, width = 180, height = 55)
 
 
 buttonStartStop = tk.Button(frameTop, highlightthickness = 0, text = "START", bg = common.colorGreen, fg = "white", font = common.fontLargeLabel, activeforeground = "white", activebackground = common.colorGreen, command = lambda:KeyInputCheck("startStop"))
-tempImage = PhotoImage(file="/home/pi/Desktop/lithography/gearImage.png")
+tempImage = PhotoImage(file="gearImage.png")
 tempImage = tempImage.subsample(6, 6)
 buttonSetting = tk.Button(frameTop, highlightthickness = 0, image = tempImage, command = lambda:KeyInputCheck("setting"))
 
@@ -526,7 +528,7 @@ labelTotalTime.place(in_ = frameSetting2, x = 30, y = 150)
 
 frameSplash = tk.Frame(root, height = 480, width = 800, bg = common.colorDarkGray)
 frameSplash.place(x = 0, y = 0)
-tempImage2 = PhotoImage(file = "/home/pi/Desktop/lithography/cella_logo.png")
+tempImage2 = PhotoImage(file = "cella_logo.png")
 tempImage2 = tempImage2.subsample(2, 2)
 labelForLogo = tk.Label(frameSplash, image = tempImage2, bg = "black")
 labelForLogo.place(in_ = frameSplash, x = 0, y = 0, width = 800, height = 480)
